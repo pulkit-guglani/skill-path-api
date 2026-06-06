@@ -1,24 +1,17 @@
 import { Injectable } from "@nestjs/common";
+import { successEnvelope } from "../common/api-envelope";
 
 export interface HealthData {
   status: "ok";
   timestamp: string;
 }
 
-export interface ApiEnvelope<T> {
-  success: boolean;
-  data: T;
-}
-
 @Injectable()
 export class HealthService {
-  getHealth(): ApiEnvelope<HealthData> {
-    return {
-      success: true,
-      data: {
-        status: "ok",
-        timestamp: new Date().toISOString(),
-      },
-    };
+  getHealth() {
+    return successEnvelope({
+      status: "ok" as const,
+      timestamp: new Date().toISOString(),
+    });
   }
 }

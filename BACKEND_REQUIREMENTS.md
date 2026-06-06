@@ -3,25 +3,32 @@
 This document tracks API and persistence work for **skill-path-backend**.  
 Frontend domain types live in the mobile repo under `domain/`. Shapes are duplicated here as Prisma models + DTOs until a shared contract package is needed.
 
-## Implemented (M0)
+## Implemented
+
+### M0
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/health` | Liveness check |
 
-## Proposed — needs approval before implementation
+### M1 — Goals CRUD
+
+| Method | Path | Request | Response | Notes |
+|--------|------|---------|----------|-------|
+| `POST` | `/api/v1/goals` | `CreateGoalDto` — client `id`, `hobby`, `goal`, `skills[]` | `ApiEnvelope<GoalDto>` | Creates `draft` goal; completion forced to `false` |
+| `GET` | `/api/v1/goals/active` | — | `ApiEnvelope<GoalDto \| null>` | Confirmed goal, or `null` |
+| `GET` | `/api/v1/goals/:id` | — | `ApiEnvelope<GoalDto>` | Fetch by id |
+| `PATCH` | `/api/v1/goals/:id/confirm` | — | `ApiEnvelope<GoalDto>` | `draft` → `confirmed`; freezes skill list |
+| `PATCH` | `/api/v1/goals/:id/skills` | `{ skills[] }` | `ApiEnvelope<GoalDto>` | Full replace; draft only |
+| `PATCH` | `/api/v1/goals/:goalId/skills/:skillId/completion` | Partial `{ videoCompleted?, readingCompleted?, practiceCompleted? }` | `ApiEnvelope<SkillDto>` | Confirmed only; auto-completes goal when all resources done |
+
+## Proposed — M2
 
 ### Goals
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
 | `POST` | `/api/v1/goals/generate-roadmap` | `{ hobby, goal }` | `ApiEnvelope<GeneratedRoadmapDto>` | Calls Gemini; returns draft skills only |
-| `POST` | `/api/v1/goals` | `{ hobby, goal, skills[] }` | `ApiEnvelope<GoalDto>` | Create goal with edited roadmap |
-| `GET` | `/api/v1/goals/active` | — | `ApiEnvelope<GoalDto \| null>` | Single active goal (confirmed, incomplete) |
-| `GET` | `/api/v1/goals/:id` | — | `ApiEnvelope<GoalDto>` | Fetch by id |
-| `PATCH` | `/api/v1/goals/:id/confirm` | — | `ApiEnvelope<GoalDto>` | `draft` → `confirmed`; freezes skill list |
-| `PATCH` | `/api/v1/goals/:id/skills` | `{ skills[] }` | `ApiEnvelope<GoalDto>` | Only while `status = draft` |
-| `PATCH` | `/api/v1/goals/:goalId/skills/:skillId/completion` | `{ videoCompleted?, readingCompleted?, practiceCompleted? }` | `ApiEnvelope<SkillDto>` | Only while `status = confirmed` |
 
 ### Response envelope (matches frontend)
 
@@ -69,4 +76,42 @@ npm run prisma:migrate
 npm run start:dev
 ```
 
+If `prisma generate` fails with `EACCES` on `~/.cache/prisma`, use a project-local cache:
+
+```bash
+XDG_CACHE_HOME="$(pwd)/.cache" npm run prisma:generate
+```
+
 Base URL: `http://localhost:8000/api`
+
+### M1 smoke test (after migrate)
+
+```bash
+# Create draft goal (use ids from domain/fixtures or generate UUIDs)
+curl -s -X POST http://localhost:8000/api/v1/goals \
+  -H "Content-Type: application/json" \
+  -d @- <<'EOF'
+{
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "hobby": "Chess",
+  "goal": "Beat my friends at chess",
+  "skills": [{
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "title": "Learn basic piece movement",
+    "order": 0,
+    "source": "ai",
+    "whyItMatters": "You cannot play until piece movement is automatic.",
+    "videoResource": { "title": "Chess basics", "url": "https://www.youtube.com/watch?v=example1" },
+    "readingResource": { "title": "Piece movement", "url": "https://example.com/chess/pieces" },
+    "practiceTask": { "title": "Movement drills", "description": "Move each piece type for 10 minutes." },
+    "completion": { "videoCompleted": false, "readingCompleted": false, "practiceCompleted": false }
+  }]
+}
+EOF
+
+curl -s -X PATCH http://localhost:8000/api/v1/goals/a1b2c3d4-e5f6-7890-abcd-ef1234567890/confirm
+curl -s http://localhost:8000/api/v1/goals/active
+curl -s -X PATCH http://localhost:8000/api/v1/goals/a1b2c3d4-e5f6-7890-abcd-ef1234567890/skills/b2c3d4e5-f6a7-8901-bcde-f12345678901/completion \
+  -H "Content-Type: application/json" \
+  -d '{"videoCompleted": true}'
+```

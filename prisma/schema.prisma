@@ -19,7 +19,7 @@ enum SkillSource {
 }
 
 model Goal {
-  id        String     @id @default(uuid()) @db.Uuid
+  id        String     @id @db.Uuid
   hobby     String     @db.VarChar(50)
   goal      String     @db.VarChar(200)
   status    GoalStatus @default(draft)
@@ -31,7 +31,7 @@ model Goal {
 }
 
 model Skill {
-  id                   String      @id @default(uuid()) @db.Uuid
+  id                   String      @id @db.Uuid
   goalId               String      @db.Uuid
   goal                 Goal        @relation(fields: [goalId], references: [id], onDelete: Cascade)
   title                String
