@@ -8,16 +8,31 @@ import {
   Post,
 } from "@nestjs/common";
 import { successEnvelope } from "../common/api-envelope";
-import { GoalDto } from "../common/dto/goal.dto";
+import {
+  GeneratedRoadmapDto,
+  GenerateRoadmapInputDto,
+  GoalDto,
+} from "../common/dto/goal.dto";
 import { SkillDto } from "../common/dto/skill.dto";
 import { CreateGoalDto } from "./dto/create-goal.dto";
 import { UpdateCompletionDto } from "./dto/update-completion.dto";
 import { UpdateSkillsDto } from "./dto/update-skills.dto";
 import { GoalsService } from "./goals.service";
+import { RoadmapGenerationService } from "./roadmap-generation.service";
 
 @Controller("v1/goals")
 export class GoalsController {
-  constructor(private readonly goalsService: GoalsService) {}
+  constructor(
+    private readonly goalsService: GoalsService,
+    private readonly roadmapGenerationService: RoadmapGenerationService
+  ) {}
+
+  @Post("generate-roadmap")
+  async generateRoadmap(@Body() dto: GenerateRoadmapInputDto) {
+    const data: GeneratedRoadmapDto =
+      await this.roadmapGenerationService.generateRoadmap(dto);
+    return successEnvelope(data);
+  }
 
   @Post()
   async create(@Body() dto: CreateGoalDto) {

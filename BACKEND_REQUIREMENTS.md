@@ -22,13 +22,13 @@ Frontend domain types live in the mobile repo under `domain/`. Shapes are duplic
 | `PATCH` | `/api/v1/goals/:id/skills` | `{ skills[] }` | `ApiEnvelope<GoalDto>` | Full replace; draft only |
 | `PATCH` | `/api/v1/goals/:goalId/skills/:skillId/completion` | Partial `{ videoCompleted?, readingCompleted?, practiceCompleted? }` | `ApiEnvelope<SkillDto>` | Confirmed only; auto-completes goal when all resources done |
 
-## Proposed — M2
-
-### Goals
+### M2 — Roadmap generation
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
-| `POST` | `/api/v1/goals/generate-roadmap` | `{ hobby, goal }` | `ApiEnvelope<GeneratedRoadmapDto>` | Calls Gemini; returns draft skills only |
+| `POST` | `/api/v1/goals/generate-roadmap` | `{ hobby, goal }` | `ApiEnvelope<GeneratedRoadmapDto>` | Gemini JSON with Google Search grounding on Gemini models (strict chain, not env-configurable): `gemini-3-flash-preview` → `gemini-2.5-flash` → `gemini-3.5-flash` → `gemini-3.1-flash-lite` → `gemma-4-31b-it`. `GEMINI_MOCK=true` returns static fixture |
+
+## Proposed — M3+
 
 ### Response envelope (matches frontend)
 
@@ -114,4 +114,13 @@ curl -s http://localhost:8000/api/v1/goals/active
 curl -s -X PATCH http://localhost:8000/api/v1/goals/a1b2c3d4-e5f6-7890-abcd-ef1234567890/skills/b2c3d4e5-f6a7-8901-bcde-f12345678901/completion \
   -H "Content-Type: application/json" \
   -d '{"videoCompleted": true}'
+```
+
+### M2 smoke test (mock mode)
+
+```bash
+# In .env: GEMINI_MOCK=true
+curl -s -X POST http://localhost:8000/api/v1/goals/generate-roadmap \
+  -H "Content-Type: application/json" \
+  -d '{"hobby": "Chess", "goal": "Beat my friends at chess"}'
 ```
