@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.git
+.cache
+.prisma-cache
+*.md
+!BACKEND_REQUIREMENTS.md

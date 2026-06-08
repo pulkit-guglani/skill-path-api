@@ -11,14 +11,20 @@ import {
   GenerateRoadmapInputDto,
 } from "../common/dto/goal.dto";
 import { GeminiService } from "../gemini/gemini.service";
+import { YoutubeService } from "../youtube/youtube.service";
 import { GenerateSkillContentInputDto } from "./dto/generate-skill-content.dto";
 import { MOCK_GENERATED_ROADMAP } from "./fixtures/mock-roadmap";
 import { MOCK_SKILLS_OUTLINE } from "./fixtures/mock-skills-outline";
 import { normalizeGeneratedRoadmap } from "./roadmap-normalizer";
 
+const FALLBACK_VIDEO_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
 @Injectable()
 export class RoadmapGenerationService {
-  constructor(private readonly geminiService: GeminiService) {}
+  constructor(
+    private readonly geminiService: GeminiService,
+    private readonly youtubeService: YoutubeService
+  ) {}
 
   async generateSkillsOutline(
     input: GenerateRoadmapInputDto
@@ -57,10 +63,17 @@ export class RoadmapGenerationService {
       input.skills
     );
     const raw = await this.geminiService.generateJson(prompt);
-    return this.validateSkillContent(
-      normalizeGeneratedRoadmap(raw),
-      input.skills.length
+    const searchQueries = await this.generateYoutubeSearchQueries(
+      input.hobby,
+      input.goal,
+      input.skills
     );
+    const withVideos = await this.attachYoutubeVideos(
+      normalizeGeneratedRoadmap(raw),
+      searchQueries
+    );
+
+    return this.validateSkillContent(withVideos, input.skills.length);
   }
 
   private isMockEnabled(): boolean {
@@ -114,14 +127,14 @@ Approved skills (keep this exact order and count):
 ${skillList}
 
 For EACH skill above, generate a complete lesson with:
-- videoResource: a real YouTube URL (https://www.youtube.com/watch?v=...)
+- videoResource: a descriptive title for the tutorial video (no URL — videos are resolved separately)
 - readingResource: a self-contained in-app article (title + content body)
 - practiceTask: title and description only (no URL)
 
 Rules:
 - Return exactly ${skills.length} skills in the same order as the list above.
 - Use the same title for each skill as provided.
-- videoResource.url must be a real YouTube watch URL.
+- Do not include YouTube URLs.
 - readingResource.content must be original educational text (300-600 words), not a URL.
 - Write readingResource.content as plain text with short sections:
   - Use "## Section Title" for section headings (2-4 sections).
@@ -136,12 +149,137 @@ Respond with JSON only, matching this exact shape:
     {
       "title": "string",
       "whyItMatters": "string",
-      "videoResource": { "title": "string", "url": "https://..." },
+      "videoResource": { "title": "string" },
       "readingResource": { "title": "string", "content": "string" },
       "practiceTask": { "title": "string", "description": "string" }
     }
   ]
 }`;
+  }
+
+  private async generateYoutubeSearchQueries(
+    hobby: string,
+    goal: string,
+    skills: GenerateSkillContentInputDto["skills"]
+  ): Promise<string[]> {
+    const skillList = skills
+      .map(
+        (skill, index) =>
+          `${index + 1}. ${skill.title} — ${skill.whyItMatters}`
+      )
+      .join("\n");
+
+    const prompt = `You are helping the Skill Path learning app find the best YouTube tutorial for each skill.
+
+User hobby: ${hobby}
+User goal: ${goal}
+
+Skills (keep this exact order):
+${skillList}
+
+For each skill, write one concise YouTube search query (3-8 words) that would find a high-quality beginner-friendly tutorial video.
+- Combine the hobby, goal context, and skill topic naturally.
+- Prefer queries like "chess opening principles tutorial" not full sentences.
+- Do not include quotes, URLs, or channel names.
+
+Respond with JSON only:
+{
+  "queries": ["query for skill 1", "query for skill 2"]
+}`;
+
+    const raw = await this.geminiService.generateJson(prompt);
+    const queries = this.extractSearchQueries(raw, skills.length);
+
+    return skills.map(
+      (skill, index) =>
+        queries[index]?.trim() ||
+        `${hobby} ${skill.title} tutorial`.trim()
+    );
+  }
+
+  private extractSearchQueries(raw: unknown, expectedCount: number): string[] {
+    const root =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : null;
+    const queries = root?.queries;
+
+    if (!Array.isArray(queries)) {
+      throw new BadGatewayException(
+        "AI returned invalid YouTube search queries"
+      );
+    }
+
+    const normalized = queries
+      .map((query) => (typeof query === "string" ? query.trim() : ""))
+      .filter(Boolean);
+
+    if (normalized.length !== expectedCount) {
+      throw new BadGatewayException(
+        `AI returned ${normalized.length} YouTube queries but ${expectedCount} were requested`
+      );
+    }
+
+    return normalized;
+  }
+
+  private async attachYoutubeVideos(
+    raw: unknown,
+    searchQueries: string[]
+  ): Promise<unknown> {
+    const root =
+      raw && typeof raw === "object" && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : null;
+
+    if (!root || !Array.isArray(root.skills)) {
+      return raw;
+    }
+
+    if (!this.youtubeService.isConfigured()) {
+      throw new ServiceUnavailableException(
+        "YouTube API is not configured. Set YOUTUBE_API_KEY."
+      );
+    }
+
+    const videoResults = await Promise.all(
+      searchQueries.map((query) => this.youtubeService.searchFirstVideo(query))
+    );
+
+    return {
+      ...root,
+      skills: root.skills.map((skill, index) => {
+        const record =
+          skill && typeof skill === "object" && !Array.isArray(skill)
+            ? (skill as Record<string, unknown>)
+            : null;
+        if (!record) {
+          return skill;
+        }
+
+        const title =
+          typeof record.title === "string" ? record.title.trim() : "Skill";
+        const videoRecord =
+          record.videoResource &&
+          typeof record.videoResource === "object" &&
+          !Array.isArray(record.videoResource)
+            ? (record.videoResource as Record<string, unknown>)
+            : null;
+        const aiVideoTitle =
+          typeof videoRecord?.title === "string"
+            ? videoRecord.title.trim()
+            : `${title} tutorial`;
+        const youtubeResult = videoResults[index];
+
+        return {
+          ...record,
+          videoResource: {
+            title: youtubeResult?.title ?? aiVideoTitle,
+            url: youtubeResult?.url ?? FALLBACK_VIDEO_URL,
+          },
+        };
+      }),
+    };
   }
 
   private async validateSkillsOutline(

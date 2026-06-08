@@ -39,13 +39,15 @@ function normalizeReadingResource(
 
 function normalizeVideoResource(
   video: Record<string, unknown>
-): { title: string; url: string } {
+): { title: string; url?: string; searchQuery?: string } {
   const title = asString(video.title) ?? "Video lesson";
-  const rawUrl = asString(video.url) ?? "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+  const rawUrl = asString(video.url);
+  const searchQuery = asString(video.searchQuery);
 
   return {
     title,
-    url: ensureHttpsUrl(rawUrl),
+    ...(searchQuery ? { searchQuery } : {}),
+    ...(rawUrl ? { url: ensureHttpsUrl(rawUrl) } : {}),
   };
 }
 
