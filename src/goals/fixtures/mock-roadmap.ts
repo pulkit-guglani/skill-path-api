@@ -1,5 +1,44 @@
 import { GeneratedRoadmapDto } from "../../common/dto/goal.dto";
 
+const PIECE_MOVEMENT_ARTICLE = `## How each piece moves
+
+Chess pieces move in fixed patterns. Learning these patterns is the first step toward playing confidently.
+
+- Pawns move forward one square, or two on their first move, and capture diagonally.
+- Rooks move in straight lines across ranks and files.
+- Bishops move diagonally any number of squares.
+- Knights jump in an L-shape: two squares in one direction, then one square perpendicular.
+- Queens combine rook and bishop movement.
+- Kings move one square in any direction.
+
+## Why movement matters
+
+If you hesitate on legal moves, you will miss tactics and blunder pieces. Drill each piece type until the patterns feel automatic.`;
+
+const OPENING_ARTICLE = `## Three opening rules
+
+Strong openings do not require memorizing long lines. Follow three principles:
+
+- Control the center with pawns and pieces.
+- Develop knights and bishops toward active squares early.
+- Castle to keep your king safe.
+
+## Avoid early mistakes
+
+Before every move, ask what your opponent threatens. Most beginner losses come from leaving pieces undefended or ignoring checks.`;
+
+const CHECKMATE_ARTICLE = `## Basic mating ideas
+
+Checkmate ends the game. Beginners should recognize a few reliable patterns:
+
+- Back-rank mate when the king is trapped by its own pawns.
+- Queen and king cooperating to drive the enemy king to the edge.
+- Rook and king coordinating to cut off escape squares.
+
+## Converting an advantage
+
+Winning material is not enough. Practice converting extra pieces into checkmate by restricting the enemy king step by step.`;
+
 /** Dev-only fixture when GEMINI_MOCK=true (mirrors frontend sampleGeneratedRoadmap). */
 export const MOCK_GENERATED_ROADMAP: GeneratedRoadmapDto = {
   skills: [
@@ -13,7 +52,7 @@ export const MOCK_GENERATED_ROADMAP: GeneratedRoadmapDto = {
       },
       readingResource: {
         title: "How each chess piece moves",
-        url: "https://example.com/chess/piece-movement",
+        content: PIECE_MOVEMENT_ARTICLE,
       },
       practiceTask: {
         title: "Movement drills",
@@ -31,7 +70,7 @@ export const MOCK_GENERATED_ROADMAP: GeneratedRoadmapDto = {
       },
       readingResource: {
         title: "Three opening rules every beginner needs",
-        url: "https://example.com/chess/opening-principles",
+        content: OPENING_ARTICLE,
       },
       practiceTask: {
         title: "Blunder check habit",
@@ -49,7 +88,7 @@ export const MOCK_GENERATED_ROADMAP: GeneratedRoadmapDto = {
       },
       readingResource: {
         title: "Essential mating patterns",
-        url: "https://example.com/chess/checkmate-patterns",
+        content: CHECKMATE_ARTICLE,
       },
       practiceTask: {
         title: "Mate drills",

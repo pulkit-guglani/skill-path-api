@@ -10,6 +10,7 @@ import {
 } from "class-validator";
 import { LinkResourceDto } from "./link-resource.dto";
 import { PracticeTaskDto } from "./practice-task.dto";
+import { ReadingArticleDto } from "./reading-article.dto";
 import { SkillCompletionDto } from "./skill-completion.dto";
 
 export enum SkillSourceDto {
@@ -41,8 +42,8 @@ export class SkillDto {
   videoResource!: LinkResourceDto;
 
   @ValidateNested()
-  @Type(() => LinkResourceDto)
-  readingResource!: LinkResourceDto;
+  @Type(() => ReadingArticleDto)
+  readingResource!: ReadingArticleDto;
 
   @ValidateNested()
   @Type(() => PracticeTaskDto)
@@ -67,8 +68,8 @@ export class GeneratedSkillDto {
   videoResource!: LinkResourceDto;
 
   @ValidateNested()
-  @Type(() => LinkResourceDto)
-  readingResource!: LinkResourceDto;
+  @Type(() => ReadingArticleDto)
+  readingResource!: ReadingArticleDto;
 
   @ValidateNested()
   @Type(() => PracticeTaskDto)

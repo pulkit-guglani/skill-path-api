@@ -41,7 +41,7 @@ model Skill {
   videoTitle           String
   videoUrl             String
   readingTitle         String
-  readingUrl           String
+  readingContent       String      @db.Text
   practiceTitle        String
   practiceDescription  String      @db.Text
   videoCompleted       Boolean     @default(false)

@@ -15,7 +15,7 @@ export interface SkillRecord {
   videoTitle: string;
   videoUrl: string;
   readingTitle: string;
-  readingUrl: string;
+  readingContent: string;
   practiceTitle: string;
   practiceDescription: string;
   videoCompleted: boolean;
@@ -55,7 +55,7 @@ export function toSkillDto(skill: SkillRecord): SkillDto {
     },
     readingResource: {
       title: skill.readingTitle,
-      url: skill.readingUrl,
+      content: skill.readingContent,
     },
     practiceTask: {
       title: skill.practiceTitle,
@@ -94,7 +94,7 @@ function toSkillFields(skill: SkillDto) {
     videoTitle: skill.videoResource.title,
     videoUrl: skill.videoResource.url,
     readingTitle: skill.readingResource.title,
-    readingUrl: skill.readingResource.url,
+    readingContent: skill.readingResource.content,
     practiceTitle: skill.practiceTask.title,
     practiceDescription: skill.practiceTask.description,
     ...EMPTY_COMPLETION,

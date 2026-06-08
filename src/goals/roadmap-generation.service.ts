@@ -14,6 +14,7 @@ import { GeminiService } from "../gemini/gemini.service";
 import { GenerateSkillContentInputDto } from "./dto/generate-skill-content.dto";
 import { MOCK_GENERATED_ROADMAP } from "./fixtures/mock-roadmap";
 import { MOCK_SKILLS_OUTLINE } from "./fixtures/mock-skills-outline";
+import { normalizeGeneratedRoadmap } from "./roadmap-normalizer";
 
 @Injectable()
 export class RoadmapGenerationService {
@@ -56,7 +57,10 @@ export class RoadmapGenerationService {
       input.skills
     );
     const raw = await this.geminiService.generateJson(prompt);
-    return this.validateSkillContent(raw, input.skills.length);
+    return this.validateSkillContent(
+      normalizeGeneratedRoadmap(raw),
+      input.skills.length
+    );
   }
 
   private isMockEnabled(): boolean {
@@ -111,15 +115,19 @@ ${skillList}
 
 For EACH skill above, generate a complete lesson with:
 - videoResource: a real YouTube URL (https://www.youtube.com/watch?v=...)
-- readingResource: a real https URL to an article or guide
+- readingResource: a self-contained in-app article (title + content body)
 - practiceTask: title and description only (no URL)
 
 Rules:
 - Return exactly ${skills.length} skills in the same order as the list above.
 - Use the same title for each skill as provided.
 - videoResource.url must be a real YouTube watch URL.
-- readingResource.url must be a real https URL.
-- Use well-known, stable educational resources where possible.
+- readingResource.content must be original educational text (300-600 words), not a URL.
+- Write readingResource.content as plain text with short sections:
+  - Use "## Section Title" for section headings (2-4 sections).
+  - Use "- " for bullet lists where helpful.
+  - Separate paragraphs with a blank line.
+  - Do not include URLs or markdown links in the article body.
 - Keep whyItMatters to 1-2 concise sentences (you may refine the provided text).
 
 Respond with JSON only, matching this exact shape:
@@ -129,7 +137,7 @@ Respond with JSON only, matching this exact shape:
       "title": "string",
       "whyItMatters": "string",
       "videoResource": { "title": "string", "url": "https://..." },
-      "readingResource": { "title": "string", "url": "https://..." },
+      "readingResource": { "title": "string", "content": "string" },
       "practiceTask": { "title": "string", "description": "string" }
     }
   ]
@@ -202,7 +210,7 @@ Respond with JSON only, matching this exact shape:
           },
           readingResource: {
             title: `${skill.title} guide`,
-            url: "https://example.com/guide",
+            content: `## ${skill.title}\n\n${skill.whyItMatters}\n\n## Key ideas\n\n- Focus on one concept at a time.\n- Practice slowly before increasing speed.\n- Review mistakes and adjust your approach.\n\n## Next steps\n\nApply what you learned in a short practice session and note what still feels difficult.`,
           },
           practiceTask: {
             title: `Practice ${skill.title.toLowerCase()}`,
