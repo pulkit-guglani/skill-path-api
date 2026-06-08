@@ -60,6 +60,25 @@ export class CreateGoalInputDto {
   goal!: string;
 }
 
+export class GeneratedSkillOutlineDto {
+  @IsString()
+  @MinLength(1)
+  title!: string;
+
+  @IsString()
+  @MinLength(1)
+  whyItMatters!: string;
+}
+
+export class GeneratedSkillsOutlineDto {
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => GeneratedSkillOutlineDto)
+  skills!: GeneratedSkillOutlineDto[];
+}
+
 export class GeneratedRoadmapDto {
   @IsArray()
   @ArrayMinSize(1)

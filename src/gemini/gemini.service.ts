@@ -67,12 +67,8 @@ export class GeminiService {
     const errors: GeminiModelAttemptError[] = [];
 
     for (const model of ROADMAP_MODEL_CHAIN) {
-      const useGoogleSearch = this.supportsGoogleSearch(model);
-      this.logger.log(
-        `Trying Gemini model "${model}"${useGoogleSearch ? " with Google Search" : ""}...`
-      );
-
-      const result = await this.tryGenerateJson(model, prompt, useGoogleSearch);
+      this.logger.log(`Trying Gemini model "${model}"...`);
+      const result = await this.requestGenerateJson(model, prompt);
 
       if (result.ok) {
         if (errors.length > 0) {
@@ -102,63 +98,26 @@ export class GeminiService {
     );
   }
 
-  private supportsGoogleSearch(model: string): boolean {
-    return model.startsWith("gemini-");
-  }
-
-  private async tryGenerateJson(
-    model: string,
-    prompt: string,
-    useGoogleSearch: boolean
-  ): Promise<
-    | { ok: true; data: unknown }
-    | { ok: false; error: GeminiModelAttemptError }
-  > {
-    let result = await this.requestGenerateJson(model, prompt, useGoogleSearch);
-
-    if (
-      !result.ok &&
-      useGoogleSearch &&
-      this.isGoogleSearchUnsupported(result.error.message)
-    ) {
-      this.logger.warn(
-        `Google Search unsupported on "${model}", retrying without search`
-      );
-      result = await this.requestGenerateJson(model, prompt, false);
-    }
-
-    return result;
-  }
-
   private async requestGenerateJson(
     model: string,
-    prompt: string,
-    useGoogleSearch: boolean
+    prompt: string
   ): Promise<
     | { ok: true; data: unknown }
     | { ok: false; error: GeminiModelAttemptError }
   > {
     const url = `${GEMINI_API_BASE}/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(this.apiKey!)}`;
 
-    const body: Record<string, unknown> = {
-      contents: [{ parts: [{ text: prompt }] }],
-    };
-
-    if (useGoogleSearch) {
-      // Google Search cannot be combined with responseMimeType: application/json.
-      body.tools = [{ google_search: {} }];
-    } else {
-      body.generationConfig = {
-        responseMimeType: "application/json",
-      };
-    }
-
     let response: Response;
     try {
       response = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+          },
+        }),
       });
     } catch {
       return {
@@ -216,7 +175,7 @@ export class GeminiService {
     }
 
     try {
-      return { ok: true, data: this.parseJsonFromText(text) };
+      return { ok: true, data: JSON.parse(text) as unknown };
     } catch {
       return {
         ok: false,
@@ -228,37 +187,6 @@ export class GeminiService {
         },
       };
     }
-  }
-
-  private parseJsonFromText(text: string): unknown {
-    const trimmed = text.trim();
-
-    try {
-      return JSON.parse(trimmed) as unknown;
-    } catch {
-      const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
-      if (fenced) {
-        return JSON.parse(fenced[1].trim()) as unknown;
-      }
-
-      const objectMatch = trimmed.match(/\{[\s\S]*\}/);
-      if (objectMatch) {
-        return JSON.parse(objectMatch[0]) as unknown;
-      }
-
-      throw new Error("Invalid JSON");
-    }
-  }
-
-  private isGoogleSearchUnsupported(message: string): boolean {
-    const lower = message.toLowerCase();
-    return (
-      lower.includes("google_search") ||
-      lower.includes("google search") ||
-      (lower.includes("tool") && lower.includes("not supported")) ||
-      lower.includes("unknown tool") ||
-      (lower.includes("tool use") && lower.includes("response mime type"))
-    );
   }
 
   private isRetryableError(status: number, message: string): boolean {

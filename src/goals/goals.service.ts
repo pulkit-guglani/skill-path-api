@@ -50,6 +50,11 @@ export class GoalsService {
     return toGoalDto(goal);
   }
 
+  async deleteAllGoals(): Promise<{ deletedGoals: number }> {
+    const result = await this.prisma.goal.deleteMany();
+    return { deletedGoals: result.count };
+  }
+
   async getActiveGoal(): Promise<GoalDto | null> {
     const goal = await this.prisma.goal.findFirst({
       where: { status: GoalStatusDto.confirmed },

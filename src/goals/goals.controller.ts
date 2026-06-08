@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -10,11 +11,13 @@ import {
 import { successEnvelope } from "../common/api-envelope";
 import {
   GeneratedRoadmapDto,
+  GeneratedSkillsOutlineDto,
   GenerateRoadmapInputDto,
   GoalDto,
 } from "../common/dto/goal.dto";
 import { SkillDto } from "../common/dto/skill.dto";
 import { CreateGoalDto } from "./dto/create-goal.dto";
+import { GenerateSkillContentInputDto } from "./dto/generate-skill-content.dto";
 import { UpdateCompletionDto } from "./dto/update-completion.dto";
 import { UpdateSkillsDto } from "./dto/update-skills.dto";
 import { GoalsService } from "./goals.service";
@@ -27,16 +30,29 @@ export class GoalsController {
     private readonly roadmapGenerationService: RoadmapGenerationService
   ) {}
 
-  @Post("generate-roadmap")
-  async generateRoadmap(@Body() dto: GenerateRoadmapInputDto) {
+  @Post("generate-skills")
+  async generateSkills(@Body() dto: GenerateRoadmapInputDto) {
+    const data: GeneratedSkillsOutlineDto =
+      await this.roadmapGenerationService.generateSkillsOutline(dto);
+    return successEnvelope(data);
+  }
+
+  @Post("generate-skill-content")
+  async generateSkillContent(@Body() dto: GenerateSkillContentInputDto) {
     const data: GeneratedRoadmapDto =
-      await this.roadmapGenerationService.generateRoadmap(dto);
+      await this.roadmapGenerationService.generateSkillContent(dto);
     return successEnvelope(data);
   }
 
   @Post()
   async create(@Body() dto: CreateGoalDto) {
     const data: GoalDto = await this.goalsService.createGoal(dto);
+    return successEnvelope(data);
+  }
+
+  @Delete()
+  async deleteAll() {
+    const data = await this.goalsService.deleteAllGoals();
     return successEnvelope(data);
   }
 

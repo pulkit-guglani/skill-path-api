@@ -26,7 +26,7 @@ Frontend domain types live in the mobile repo under `domain/`. Shapes are duplic
 
 | Method | Path | Request | Response | Notes |
 |--------|------|---------|----------|-------|
-| `POST` | `/api/v1/goals/generate-roadmap` | `{ hobby, goal }` | `ApiEnvelope<GeneratedRoadmapDto>` | Gemini JSON with Google Search grounding on Gemini models (strict chain, not env-configurable): `gemini-3-flash-preview` → `gemini-2.5-flash` → `gemini-3.5-flash` → `gemini-3.1-flash-lite` → `gemma-4-31b-it`. `GEMINI_MOCK=true` returns static fixture |
+| `POST` | `/api/v1/goals/generate-roadmap` | `{ hobby, goal }` | `ApiEnvelope<GeneratedRoadmapDto>` | Gemini JSON (strict model chain, not env-configurable): `gemini-3-flash-preview` → `gemini-2.5-flash` → `gemini-3.5-flash` → `gemini-3.1-flash-lite` → `gemma-4-31b-it`. `GEMINI_MOCK=true` returns static fixture |
 
 ## Proposed — M3+
 
